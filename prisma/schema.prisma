@@ -1,0 +1,111 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider   = "prisma-client-js"
+  engineType = "client"
+  runtime    = "bun"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum MeetPointType {
+  ADDRESS
+  COORDINATES
+}
+
+enum CustomFieldType {
+  TEXT
+  NUMBER
+  DATE
+  BOOLEAN
+}
+
+model User {
+  id        String @id @default(ulid())
+  full_name String
+
+  Bookings Booking[]
+  Page     Page[]
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("users")
+}
+
+model Page {
+  id              String        @id @default(ulid())
+  owner_id        String
+  owner           User          @relation(fields: [owner_id], references: [id], onDelete: Cascade)
+  title           String
+  slug            String
+  booking_intro   String?
+  time_sections   Int
+  day_opens       Json
+  meet_point      String
+  meet_point_type MeetPointType
+  is_published    Boolean       @default(true)
+
+  created_at   DateTime       @default(now())
+  updated_at   DateTime       @updatedAt
+  Booking      Booking[]
+  custom_field custom_field[]
+
+  @@map("pages")
+}
+
+model Booking {
+  id      Int    @id @default(autoincrement())
+  page_id String
+  page    Page   @relation(fields: [page_id], references: [id], onDelete: Cascade)
+
+  name       String
+  phone      String
+  time_start DateTime
+  time_end   DateTime
+
+  user_id String
+  user    User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  created_at         DateTime             @default(now())
+  updated_at         DateTime             @updatedAt
+  custom_field_value custom_field_value[]
+
+  @@map("bookings")
+}
+
+model custom_field {
+  id                 Int                  @id @default(autoincrement())
+  page_id            String
+  page               Page                 @relation(fields: [page_id], references: [id], onDelete: Cascade)
+  label              String
+  type               CustomFieldType
+  sort_order         Int
+  is_required        Boolean              @default(false)
+  created_at         DateTime             @default(now())
+  updated_at         DateTime             @updatedAt
+  custom_field_value custom_field_value[]
+
+  @@map("custom_fields")
+}
+
+model custom_field_value {
+  id              Int          @id @default(autoincrement())
+  booking_id      Int
+  booking         Booking      @relation(fields: [booking_id], references: [id], onDelete: Cascade)
+  custom_field_id Int
+  custom_field    custom_field @relation(fields: [custom_field_id], references: [id], onDelete: Cascade)
+  value           String
+  created_at      DateTime     @default(now())
+  updated_at      DateTime     @updatedAt
+
+  @@map("custom_field_values")
+}
